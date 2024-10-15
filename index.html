@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Leaflet Geolocation with High Accuracy</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <!-- Leaflet JavaScript -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <style>
+    #map {
+      height: 400px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Leaflet Geolocation with Address and High Accuracy</h1>
+<p>Click the button to get your coordinates and address.</p>
+
+<button onclick="getLocation()">Try It</button>
+
+<p id="demo"></p>
+
+<!-- Container for Leaflet map -->
+<div id="map"></div>
+
+<script>
+const x = document.getElementById("demo");
+let map; // Declare map globally
+let marker; // Declare marker globally
+
+// Function to get the current location of the user
+function getLocation() {
+  if (navigator.geolocation) {
+    // Request high accuracy from the device
+    navigator.geolocation.getCurrentPosition(showPosition, showError, {enableHighAccuracy: true});
+  } else { 
+    x.innerHTML = "Geolocation is not supported by this browser.";
+  }
+}
+
+function getDateTime(){
+  const date = new Date();
+  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+  return date.toLocaleDateString('id-ID', options);
+}
+
+// Function to save location details and add them to the marker popup
+function saveLocationDetails(latitude, longitude, address) {
+  // Show the location details on the web page
+  x.innerHTML = `Latitude: ${latitude} <br>Longitude: ${longitude} <br>Address: ${address}`;
+  
+  // If marker doesn't exist, create a new one. Otherwise, update the marker position and popup.
+  if (!marker) {
+    marker = L.marker([latitude, longitude]).addTo(map);
+  } else {
+    marker.setLatLng([latitude, longitude]);
+  }
+  
+  // Add popup with location details to the marker
+  marker.bindPopup(`<b>Your Location</b><br>Latitude: ${latitude}<br>Longitude: ${longitude}<br>Address: ${address}`).openPopup();
+}
+
+// Function to show the position on the map and get address
+function showPosition(position) {
+  const latitude = position.coords.latitude;
+  const longitude = position.coords.longitude;
+
+  // Initialize Leaflet map
+  if (!map) {
+    map = L.map('map').setView([latitude, longitude], 16); // Set view closer with zoom level 16 for accuracy
+
+    // Add OpenStreetMap tile layer to the map
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+  } else {
+    map.setView([latitude, longitude], 16); // Recenter map if already initialized
+  }
+
+  // Call function to get the address and save the location details
+  getAddress(latitude, longitude);
+}
+
+// Function to handle any geolocation errors
+function showError(error) {
+  switch(error.code) {
+    case error.PERMISSION_DENIED:
+      x.innerHTML = "User denied the request for Geolocation.";
+      break;
+    case error.POSITION_UNAVAILABLE:
+      x.innerHTML = "Location information is unavailable.";
+      break;
+    case error.TIMEOUT:
+      x.innerHTML = "The request to get user location timed out.";
+      break;
+    case error.UNKNOWN_ERROR:
+      x.innerHTML = "An unknown error occurred.";
+      break;
+  }
+}
+
+// Function to get the address using OpenStreetMap Nominatim API
+function getAddress(latitude, longitude) {
+  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`;
+
+  // Fetch the address data
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      let address = "Address not found";
+      if (data && data.display_name) {
+        address = data.display_name;
+      }
+      // Save the location details (latitude, longitude, address)
+      saveLocationDetails(latitude, longitude, address);
+    })
+    .catch(error => {
+      console.error('Error fetching the address:', error);
+      x.innerHTML += "<br>Failed to get address";
+    });
+}
+</script>
+
+</body>
+</html>
